@@ -80,8 +80,8 @@ kpi_df = (
         F.col("coin_name"),
         F.col("coin_symbol").alias("symbol"),
         F.col("market_cap_rank"),
-        F.col("current_price_usd"),
-        F.col("price_change_pct_24h"),
+        F.col("coin_price"),
+        F.col("price_change_24h_percent"),
         F.col("is_also_top50").alias("is_in_top50"),
         F.col("trend_run_date").alias("snapshot_date"),
     )

@@ -263,9 +263,8 @@ class GoldColumns:
         "coin_name",
         "coin_symbol",
         "market_cap_rank",
-        "current_price_usd",
-        "price_change_pct_24h",
-        "total_volume_24h_usd",
+        "coin_price",
+        "price_change_24h_percent",
         "is_also_top50",
         "gold_processed_timestamp",
     ]
@@ -344,8 +343,8 @@ class KPIColumns:
         "coin_name",
         "symbol",
         "market_cap_rank",
-        "current_price_usd",
-        "price_change_pct_24h",
+        "coin_price",
+        "price_change_24h_percent",
         "is_in_top50",
         "snapshot_date",
     ]

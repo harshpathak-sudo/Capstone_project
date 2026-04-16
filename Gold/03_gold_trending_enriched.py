@@ -63,6 +63,10 @@ market_df   = read_silver_table(spark, SilverInputPaths.MARKET_SNAPSHOT, logger)
 
 # COMMAND ----------
 
+trending_df.display()
+
+# COMMAND ----------
+
 # =============================================================================
 # CELL 3 — LEFT JOIN TRENDING WITH MARKET DATA
 # =============================================================================
@@ -88,9 +92,8 @@ joined_df = (
         F.col("t.coin_name"),
         F.col("t.coin_symbol"),
         F.col("t.market_cap_rank"),
-        F.col("m.current_price_usd").cast(DoubleType()),
-        F.col("m.price_change_pct_24h").cast(DoubleType()),
-        F.col("m.total_volume_24h_usd"),
+        F.col("t.coin_price").cast(DoubleType()),
+        F.col("t.price_change_24h_percent").cast(DoubleType()),
         F.when(
             F.col("m.coin_id").isNotNull(), True
         ).otherwise(False)
@@ -115,6 +118,10 @@ joined_df.display()
 
 logger.info("CELL 4: Reordering to final Gold schema")
 final_df = joined_df.select(*GoldColumns.TRENDING_ENRICHED)
+
+# COMMAND ----------
+
+final_df.display()
 
 # COMMAND ----------
 
