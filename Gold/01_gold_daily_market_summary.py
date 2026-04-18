@@ -41,7 +41,7 @@ from pyspark.sql import functions as F
 from pyspark.sql import Window
 from pyspark.sql.types import DoubleType, BooleanType
 
-adls_name = "adlsnewhp"
+adls_name = "adlsnewhp1"
 init_gold_config(adls_name)
 
 logger = get_logger("gold_daily_market_summary")
@@ -121,11 +121,11 @@ gold_df = (
         F.col("price_change_pct_24h"),
 
         # ── Derived: top 5 gainer/loser flags ─────────────────────────────────
-        (F.rank().over(w_gainer) <= 5)
+        (F.row_number().over(w_gainer) <= 5)
             .cast(BooleanType())
             .alias("is_top5_gainer"),
 
-        (F.rank().over(w_loser) <= 5)
+        (F.row_number().over(w_loser) <= 5)
             .cast(BooleanType())
             .alias("is_top5_loser"),
 

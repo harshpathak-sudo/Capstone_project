@@ -35,7 +35,7 @@ from pyspark.sql import functions as F
 from pyspark.sql import Window
 from pyspark.sql.types import DoubleType, BooleanType
 
-adls_name = "adlsnewhp"
+adls_name = "adlsnewhp1"
 init_gold_config(adls_name)
 
 logger = get_logger("gold_ohlc_enriched")
@@ -93,9 +93,32 @@ logger.info("CELL 3: Applying OHLC enrichment transformations")
 # Window: per coin, ordered by timestamp
 w_coin = Window.partitionBy("coin_id").orderBy("ohlc_timestamp")
 
-# Rolling windows for moving averages
-w_7day  = w_coin.rowsBetween(-6, 0)    # 7 rows: current + 6 preceding
-w_30day = w_coin.rowsBetween(-29, 0)   # 30 rows: current + 29 preceding
+# ── Rolling windows for moving averages (TIME-BASED, not row-based) ──────
+#
+# WHY rangeBetween INSTEAD OF rowsBetween?
+#   rowsBetween(-6, 0) counts 7 physical rows, NOT 7 days of time.
+#   CoinGecko's OHLC API with days=30 returns 4-HOUR candles (6/day).
+#   With rowsBetween:  7 rows × 4 hours = 28 hours  (NOT 7 days!)
+#                     30 rows × 4 hours = 120 hours (NOT 30 days!)
+#   This silently corrupts Golden Cross / Death Cross signals.
+#
+#   rangeBetween operates on the NUMERIC VALUE of the order column.
+#   By ordering on ohlc_timestamp cast to Unix epoch (seconds),
+#   we specify the window in seconds → correct regardless of candle
+#   granularity (4-hour, daily) or missing data gaps.
+#
+#   7 days  = 7 × 86400  =  604,800 seconds
+#   30 days = 30 × 86400 = 2,592,000 seconds
+# ─────────────────────────────────────────────────────────────────────────
+SECONDS_7_DAYS  = 7  * 24 * 60 * 60   # 604,800
+SECONDS_30_DAYS = 30 * 24 * 60 * 60   # 2,592,000
+
+w_coin_time = (
+    Window.partitionBy("coin_id")
+          .orderBy(F.col("ohlc_timestamp").cast("long"))
+)
+w_7day  = w_coin_time.rangeBetween(-SECONDS_7_DAYS, 0)
+w_30day = w_coin_time.rangeBetween(-SECONDS_30_DAYS, 0)
 
 gold_df = (
     silver_df

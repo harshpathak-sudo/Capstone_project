@@ -33,7 +33,7 @@
 from pyspark.sql import functions as F
 from pyspark.sql.types import DoubleType, StringType
 
-adls_name = "adlsnewhp"
+adls_name = "adlsnewhp1"
 init_gold_config(adls_name)
 
 logger = get_logger("gold_global_daily")
