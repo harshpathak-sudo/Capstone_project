@@ -1,23 +1,4 @@
 # Databricks notebook source
-# =============================================================================
-# NOTEBOOK: 06_kpi_gainers_losers.py
-# LAYER:    Platinum (KPI)
-# PURPOSE:  Create a Power BI-ready table for the "Gainers & Losers" dashboard.
-#           Filters gold/daily_market_summary to the LAST 30 DAYS,
-#           derives gainer rank, category, and badge columns.
-#
-# SOURCE:   gold/daily_market_summary (last 30 days)
-# OUTPUT:   gold/kpi_gainers_losers   (DELTA OVERWRITE)
-#
-# POWER BI USAGE:
-#   This table feeds Page 2 — "Gainers & Losers":
-#     - Horizontal bar chart sorted by 24h change % (green=gain, red=loss)
-#     - KPI Cards: Top Gainer, Top Loser, Avg Market Change
-#     - Leaderboard with rank badges (#1, #2...)
-# =============================================================================
-
-# COMMAND ----------
-
 # MAGIC %run ../connection
 
 # COMMAND ----------
@@ -30,9 +11,7 @@
 
 # COMMAND ----------
 
-# =============================================================================
 # CELL 1 — SETUP
-# =============================================================================
 
 from pyspark.sql import functions as F
 from pyspark.sql import Window
@@ -52,9 +31,8 @@ logger.info("=" * 70)
 
 # COMMAND ----------
 
-# =============================================================================
+
 # CELL 2 — READ GOLD AND FILTER TO LAST 30 DAYS
-# =============================================================================
 
 logger.info("CELL 2: Reading gold/daily_market_summary (last 30 days)")
 
@@ -71,18 +49,8 @@ logger.info(f"  Rows (last 30 days): {row_count:,}")
 
 # COMMAND ----------
 
-# =============================================================================
+
 # CELL 3 — DERIVE KPI COLUMNS
-#
-# gainer_rank_daily: RANK per day, ordered by price change % descending.
-#   Rank 1 = biggest gainer of the day.
-#
-# category: 'Gainer' if positive change, 'Loser' if negative, 'Flat' if 0.
-#   Used as a slicer/filter in Power BI.
-#
-# gainer_loser_badge: Top 5 flag for conditional formatting.
-#   'Top 5 Gainer', 'Top 5 Loser', or null.
-# =============================================================================
 
 logger.info("CELL 3: Deriving gainer/loser KPI columns")
 
@@ -126,9 +94,7 @@ kpi_df.display()
 
 # COMMAND ----------
 
-# =============================================================================
 # CELL 4 — OVERWRITE KPI TABLE
-# =============================================================================
 
 logger.info("CELL 4: OVERWRITE gold/kpi_gainers_losers")
 
@@ -136,9 +102,8 @@ written_count = delta_overwrite(kpi_df, GoldPaths.KPI_GAINERS_LOSERS, logger)
 
 # COMMAND ----------
 
-# =============================================================================
+
 # CELL 5 — RUN LOG + COMPLETION
-# =============================================================================
 
 summary = {
     "notebook"           : "06_kpi_gainers_losers",

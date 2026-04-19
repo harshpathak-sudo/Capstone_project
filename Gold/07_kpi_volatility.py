@@ -1,27 +1,4 @@
 # Databricks notebook source
-# =============================================================================
-# NOTEBOOK: 07_kpi_volatility.py
-# LAYER:    Platinum (KPI)
-# PURPOSE:  Create a Power BI-ready volatility/OHLC analysis table.
-#           Filters gold/ohlc_enriched to the LAST 90 DAYS, joins coin names
-#           from Silver, and derives 30-day annualised volatility.
-#
-# SOURCE:   gold/ohlc_enriched (last 90 days) + silver/market_snapshot (names)
-# OUTPUT:   gold/kpi_volatility  (DELTA OVERWRITE)
-#
-# ANNUALISED VOLATILITY FORMULA:
-#   annualised_vol = STDDEV(daily_return_pct) * SQRT(365)
-#   Higher value = riskier coin. Used for volatility ranking bar chart.
-#
-# POWER BI USAGE:
-#   This table feeds Page 4 — "Volatility & OHLC":
-#     - Candlestick chart per coin
-#     - Volatility ranking bar chart
-#     - KPI Cards: Most/Least Volatile Coin
-# =============================================================================
-
-# COMMAND ----------
-
 # MAGIC %run ../connection
 
 # COMMAND ----------
@@ -38,9 +15,7 @@
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 1 — SETUP
-# =============================================================================
+
 
 from pyspark.sql import functions as F
 from pyspark.sql import Window
@@ -62,9 +37,7 @@ logger.info("=" * 70)
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 2 — READ GOLD OHLC AND FILTER TO LAST 90 DAYS
-# =============================================================================
+
 
 logger.info("CELL 2: Reading gold/ohlc_enriched (last 90 days)")
 
@@ -81,9 +54,8 @@ logger.info(f"  Rows (last 90 days): {ohlc_count:,}")
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 3 — JOIN COIN NAMES FROM SILVER MARKET SNAPSHOT
-# =============================================================================
+# JOIN COIN NAMES FROM SILVER MARKET SNAPSHOT
+
 
 logger.info("CELL 3: Joining coin names from Silver market_snapshot")
 
@@ -102,19 +74,17 @@ name_lookup = (
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 4 — DERIVE ANNUALISED VOLATILITY
+# DERIVE ANNUALISED VOLATILITY
 #
 # Business logic is in transformations.py (imported via %run ./transformations).
 # compute_annualised_volatility() calculates: STDDEV(daily_return_pct) × √365
-# See transformations.py for full documentation.
-# =============================================================================
+
 
 logger.info("CELL 4: Computing annualised volatility (via transformations.py)")
 
 volatility_df = compute_annualised_volatility(last_90d_df, window_days=30)
 
-# Join coin names
+
 kpi_df = (
     volatility_df
     .join(name_lookup, volatility_df["coin_id"] == name_lookup["m_coin_id"], "left")
@@ -142,25 +112,20 @@ kpi_df.display()
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 5 — OVERWRITE KPI TABLE
-# =============================================================================
 
 logger.info("CELL 5: OVERWRITE gold/kpi_volatility")
 
 written_count = delta_overwrite(kpi_df, GoldPaths.KPI_VOLATILITY, logger)
 
-# OPTIMIZE + Z-ORDER: ~27K rows. Dashboard filters by coin_id (Query 4.3)
-# and ohlc_date (Query 4.1 MAX(ohlc_date)). Z-ORDER clusters these columns
-# together so Spark skips irrelevant files during dashboard queries.
+
 optimize_delta(spark, GoldPaths.KPI_VOLATILITY, "coin_id, ohlc_date",
                "kpi_volatility", logger)
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 6 — RUN LOG + COMPLETION
-# =============================================================================
+
+# RUN LOG + COMPLETION
+
 
 summary = {
     "notebook"           : "07_kpi_volatility",

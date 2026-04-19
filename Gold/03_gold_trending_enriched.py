@@ -1,25 +1,4 @@
 # Databricks notebook source
-# =============================================================================
-# NOTEBOOK: 03_gold_trending_enriched.py
-# LAYER:    Gold
-# PURPOSE:  Enrich the trending coins list (7 coins/day) with live market
-#           data from Silver market_snapshot via a LEFT JOIN.
-#
-# SOURCE:   silver/trending_coins  LEFT JOIN  silver/market_snapshot
-# OUTPUT:   gold/trending_enriched  (DELTA MERGE — accumulates daily)
-#
-# WHY LEFT JOIN (not INNER)?
-#   Trending coins may include coins OUTSIDE our top-50 tracked list.
-#   LEFT JOIN keeps all 7 trending coins — market data fields become null
-#   for coins not in our top 50. The is_also_top50 flag tells Power BI
-#   whether we have market data for this coin or not.
-#
-# MERGE KEY: (trend_run_date, coin_id)
-# Z-ORDER:   (trend_run_date)
-# =============================================================================
-
-# COMMAND ----------
-
 # MAGIC %run ../connection
 
 # COMMAND ----------
@@ -32,9 +11,7 @@
 
 # COMMAND ----------
 
-# =============================================================================
 # CELL 1 — SETUP
-# =============================================================================
 
 from pyspark.sql import functions as F
 from pyspark.sql.types import BooleanType, DoubleType
@@ -54,9 +31,7 @@ logger.info("=" * 70)
 
 # COMMAND ----------
 
-# =============================================================================
 # CELL 2 — READ SILVER TABLES (full reads)
-# =============================================================================
 
 trending_df = read_silver_table(spark, SilverInputPaths.TRENDING_COINS, logger)
 market_df   = read_silver_table(spark, SilverInputPaths.MARKET_SNAPSHOT, logger)
@@ -67,9 +42,7 @@ trending_df.display()
 
 # COMMAND ----------
 
-# =============================================================================
 # CELL 3 — LEFT JOIN TRENDING WITH MARKET DATA
-# =============================================================================
 
 logger.info("CELL 3: LEFT JOIN trending_coins with market_snapshot")
 
@@ -112,9 +85,7 @@ joined_df.display()
 
 # COMMAND ----------
 
-# =============================================================================
 # CELL 4 — FINAL COLUMN REORDER
-# =============================================================================
 
 logger.info("CELL 4: Reordering to final Gold schema")
 final_df = joined_df.select(*GoldColumns.TRENDING_ENRICHED)
@@ -125,9 +96,7 @@ final_df.display()
 
 # COMMAND ----------
 
-# =============================================================================
 # CELL 5 — DELTA MERGE INTO GOLD
-# =============================================================================
 
 logger.info("CELL 5: MERGE into gold/trending_enriched")
 
@@ -141,9 +110,7 @@ merge_stats = delta_merge_gold(
 
 # COMMAND ----------
 
-# =============================================================================
 # CELL 6 — OPTIMIZE + Z-ORDER
-# =============================================================================
 
 logger.info("CELL 6: OPTIMIZE gold/trending_enriched")
 optimize_delta(spark, GoldPaths.TRENDING_ENRICHED, "trend_run_date",
@@ -151,9 +118,8 @@ optimize_delta(spark, GoldPaths.TRENDING_ENRICHED, "trend_run_date",
 
 # COMMAND ----------
 
-# =============================================================================
+
 # CELL 7 — RUN LOG + COMPLETION
-# =============================================================================
 
 summary = {
     "notebook"            : "03_gold_trending_enriched",

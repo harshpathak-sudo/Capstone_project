@@ -1,32 +1,4 @@
 # Databricks notebook source
-# =============================================================================
-# NOTEBOOK: 09_kpi_price_trends.py
-# LAYER:    Platinum (KPI)
-# PURPOSE:  Create a Power BI-ready time-series table for the "Price Trends"
-#           dashboard page. Combines hourly price/volume data with global
-#           market context and coin names.
-#
-# SOURCES:
-#   silver/hourly_timeseries  — hourly price + volume per coin (last 30 days)
-#   gold/global_daily         — daily global market cap, BTC dominance, sentiment
-#   silver/market_snapshot    — coin names (for chart labels)
-#
-# OUTPUT:   gold/kpi_price_trends  (DELTA OVERWRITE)
-#
-# VOLUME SPIKE DETECTION:
-#   is_volume_spike = true when a coin's hourly volume exceeds 2× its
-#   7-day average volume. This flags unusual trading activity.
-#
-# POWER BI USAGE:
-#   This table feeds Page 3 — "Price Trends":
-#     - Multi-line chart: hourly price with volume bars below
-#     - BTC dominance secondary axis
-#     - Volume spike markers on chart
-#     - Market sentiment background shade
-# =============================================================================
-
-# COMMAND ----------
-
 # MAGIC %run ../connection
 
 # COMMAND ----------
@@ -43,9 +15,7 @@
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 1 — SETUP
-# =============================================================================
+
 
 from pyspark.sql import functions as F
 from pyspark.sql import Window
@@ -67,9 +37,7 @@ logger.info("=" * 70)
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 2 — READ SOURCE TABLES
-# =============================================================================
+
 
 logger.info("CELL 2: Reading source tables")
 
@@ -83,9 +51,9 @@ market_df = spark.read.format("delta").load(SilverInputPaths.MARKET_SNAPSHOT)
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 3 — PREPARE COIN NAME LOOKUP
-# =============================================================================
+
+# PREPARE COIN NAME LOOKUP
+
 
 logger.info("CELL 3: Building coin name lookup")
 
@@ -102,13 +70,8 @@ name_lookup = (
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 4 — COMPUTE VOLUME SPIKE FLAG
-#
-# Business logic is in transformations.py (imported via %run ./transformations).
-# compute_volume_spikes() flags hours where volume > 2× the 7-day rolling avg.
-# See transformations.py for full documentation.
-# =============================================================================
+
+# COMPUTE VOLUME SPIKE FLAG
 
 logger.info("CELL 4: Computing volume spike detection (via transformations.py)")
 
@@ -116,9 +79,9 @@ hourly_with_spike = compute_volume_spikes(hourly_df, window_hours=168, threshold
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 5 — PREPARE GLOBAL DAILY FOR JOIN
-# =============================================================================
+
+# PREPARE GLOBAL DAILY FOR JOIN
+
 
 logger.info("CELL 5: Preparing global daily for join")
 
@@ -134,9 +97,9 @@ global_join = (
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 6 — FINAL JOIN: hourly + names + global context
-# =============================================================================
+
+# FINAL JOIN: hourly + names + global context
+
 
 logger.info("CELL 6: Joining hourly + names + global context")
 
@@ -168,25 +131,20 @@ kpi_df.display()
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 7 — OVERWRITE KPI TABLE
-# =============================================================================
+# OVERWRITE KPI TABLE
+
 
 logger.info("CELL 7: OVERWRITE gold/kpi_price_trends")
 
 written_count = delta_overwrite(kpi_df, GoldPaths.KPI_PRICE_TRENDS, logger)
 
-# OPTIMIZE + Z-ORDER: ~36K rows (largest KPI table). Dashboard filters by
-# coin_id (Query 3.2 WHERE coin_id='bitcoin') and coin_name (Query 3.1
-# parameter widget). Z-ORDER clusters data so filtered queries skip files.
 optimize_delta(spark, GoldPaths.KPI_PRICE_TRENDS, "coin_id, hour_timestamp",
                "kpi_price_trends", logger)
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 8 — RUN LOG + COMPLETION
-# =============================================================================
+# RUN LOG + COMPLETION
+
 
 summary = {
     "notebook"           : "09_kpi_price_trends",

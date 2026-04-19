@@ -1,25 +1,4 @@
 # Databricks notebook source
-# =============================================================================
-# NOTEBOOK: 05_kpi_market_overview.py
-# LAYER:    Platinum (KPI)
-# PURPOSE:  Create a Power BI-ready snapshot of the market overview.
-#           Filters gold/daily_market_summary to the LATEST DATE only,
-#           renames columns to human-readable Power BI labels, and
-#           OVERWRITES the KPI table.
-#
-# SOURCE:   gold/daily_market_summary (latest date only)
-# OUTPUT:   gold/kpi_market_overview  (DELTA OVERWRITE — fresh each run)
-#
-# POWER BI USAGE:
-#   This table feeds Page 1 — "Market Overview":
-#     - KPI Cards: Total Market Cap, Total Volume, # Gainers, # Losers
-#     - Bar chart: Top 10 by Market Cap
-#     - Donut chart: Market Cap Share
-#     - Gainer/Loser leaderboards
-# =============================================================================
-
-# COMMAND ----------
-
 # MAGIC %run ../connection
 
 # COMMAND ----------
@@ -32,9 +11,7 @@
 
 # COMMAND ----------
 
-# =============================================================================
 # CELL 1 — SETUP
-# =============================================================================
 
 from pyspark.sql import functions as F
 
@@ -52,9 +29,7 @@ logger.info("=" * 70)
 
 # COMMAND ----------
 
-# =============================================================================
 # CELL 2 — READ GOLD TABLE AND FILTER TO LATEST DATE
-# =============================================================================
 
 logger.info("CELL 2: Reading gold/daily_market_summary (latest date)")
 
@@ -70,9 +45,8 @@ logger.info(f"  Rows for latest date: {row_count:,}")
 
 # COMMAND ----------
 
-# =============================================================================
+#
 # CELL 3 — RENAME TO POWER BI-FRIENDLY COLUMNS
-# =============================================================================
 
 logger.info("CELL 3: Renaming columns to Power BI labels")
 
@@ -102,9 +76,7 @@ kpi_df.display()
 
 # COMMAND ----------
 
-# =============================================================================
 # CELL 4 — OVERWRITE KPI TABLE
-# =============================================================================
 
 logger.info("CELL 4: OVERWRITE gold/kpi_market_overview")
 
@@ -112,9 +84,7 @@ written_count = delta_overwrite(kpi_df, GoldPaths.KPI_MARKET_OVERVIEW, logger)
 
 # COMMAND ----------
 
-# =============================================================================
 # CELL 5 — RUN LOG + COMPLETION
-# =============================================================================
 
 summary = {
     "notebook"            : "05_kpi_market_overview",
