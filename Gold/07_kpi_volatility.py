@@ -34,6 +34,10 @@
 
 # COMMAND ----------
 
+# MAGIC %run ./transformations
+
+# COMMAND ----------
+
 # =============================================================================
 # CELL 1 — SETUP
 # =============================================================================
@@ -101,26 +105,14 @@ name_lookup = (
 # =============================================================================
 # CELL 4 — DERIVE ANNUALISED VOLATILITY
 #
-# 30-Day Annualised Volatility = STDDEV(daily_return_pct) * SQRT(365)
-#   SQRT(365) annualises the daily STDDEV to an annual figure.
+# Business logic is in transformations.py (imported via %run ./transformations).
+# compute_annualised_volatility() calculates: STDDEV(daily_return_pct) × √365
+# See transformations.py for full documentation.
 # =============================================================================
 
-logger.info("CELL 4: Computing annualised volatility")
+logger.info("CELL 4: Computing annualised volatility (via transformations.py)")
 
-w_vol = (
-    Window.partitionBy("coin_id")
-    .orderBy("ohlc_date")
-    .rowsBetween(-29, 0)
-)
-
-volatility_df = (
-    last_90d_df
-    .withColumn(
-        "annualised_volatility_30d",
-        (F.stddev("daily_return_pct").over(w_vol) * math.sqrt(365))
-        .cast(DoubleType())
-    )
-)
+volatility_df = compute_annualised_volatility(last_90d_df, window_days=30)
 
 # Join coin names
 kpi_df = (
@@ -157,6 +149,12 @@ kpi_df.display()
 logger.info("CELL 5: OVERWRITE gold/kpi_volatility")
 
 written_count = delta_overwrite(kpi_df, GoldPaths.KPI_VOLATILITY, logger)
+
+# OPTIMIZE + Z-ORDER: ~27K rows. Dashboard filters by coin_id (Query 4.3)
+# and ohlc_date (Query 4.1 MAX(ohlc_date)). Z-ORDER clusters these columns
+# together so Spark skips irrelevant files during dashboard queries.
+optimize_delta(spark, GoldPaths.KPI_VOLATILITY, "coin_id, ohlc_date",
+               "kpi_volatility", logger)
 
 # COMMAND ----------
 

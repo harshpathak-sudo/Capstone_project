@@ -39,6 +39,10 @@
 
 # COMMAND ----------
 
+# MAGIC %run ./transformations
+
+# COMMAND ----------
+
 # =============================================================================
 # CELL 1 — SETUP
 # =============================================================================
@@ -101,34 +105,14 @@ name_lookup = (
 # =============================================================================
 # CELL 4 — COMPUTE VOLUME SPIKE FLAG
 #
-# VOLUME SPIKE = hourly volume > 2× the 7-day rolling average volume.
-# 7 days × 24 hours = 168 rows for the rolling window.
+# Business logic is in transformations.py (imported via %run ./transformations).
+# compute_volume_spikes() flags hours where volume > 2× the 7-day rolling avg.
+# See transformations.py for full documentation.
 # =============================================================================
 
-logger.info("CELL 4: Computing volume spike detection")
+logger.info("CELL 4: Computing volume spike detection (via transformations.py)")
 
-w_7d_vol = (
-    Window.partitionBy("coin_id")
-    .orderBy("hour_timestamp")
-    .rowsBetween(-168, 0)
-)
-
-hourly_with_spike = (
-    hourly_df
-    .withColumn(
-        "avg_volume_7d",
-        F.avg("volume_usd").over(w_7d_vol)
-    )
-    .withColumn(
-        "is_volume_spike",
-        F.when(
-            F.col("avg_volume_7d").isNotNull() & (F.col("avg_volume_7d") > 0),
-            F.col("volume_usd") > (F.col("avg_volume_7d") * 2)
-        ).otherwise(False)
-        .cast(BooleanType())
-    )
-    .drop("avg_volume_7d")
-)
+hourly_with_spike = compute_volume_spikes(hourly_df, window_hours=168, threshold_multiplier=2)
 
 # COMMAND ----------
 
@@ -191,6 +175,12 @@ kpi_df.display()
 logger.info("CELL 7: OVERWRITE gold/kpi_price_trends")
 
 written_count = delta_overwrite(kpi_df, GoldPaths.KPI_PRICE_TRENDS, logger)
+
+# OPTIMIZE + Z-ORDER: ~36K rows (largest KPI table). Dashboard filters by
+# coin_id (Query 3.2 WHERE coin_id='bitcoin') and coin_name (Query 3.1
+# parameter widget). Z-ORDER clusters data so filtered queries skip files.
+optimize_delta(spark, GoldPaths.KPI_PRICE_TRENDS, "coin_id, hour_timestamp",
+               "kpi_price_trends", logger)
 
 # COMMAND ----------
 

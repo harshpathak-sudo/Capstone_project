@@ -33,6 +33,10 @@
 
 # COMMAND ----------
 
+# MAGIC %run ./transformations
+
+# COMMAND ----------
+
 # =============================================================================
 # CELL 1 — SETUP
 # =============================================================================
@@ -71,83 +75,23 @@ silver_df.display()
 # =============================================================================
 # CELL 3 — TRANSFORMATIONS
 #
-# WINDOW FUNCTIONS EXPLAINED:
+# Business logic is in transformations.py (imported via %run ./transformations).
+# This makes the transformation functions independently unit-testable.
 #
-#   RANK() OVER (PARTITION BY snapshot_date ORDER BY price_change_pct_24h DESC)
-#     → For each day, rank all 50 coins by % change (best first).
-#     → Top 5 get is_top5_gainer = true.
-#     → Bottom 5 (ASC order) get is_top5_loser = true.
+# apply_daily_market_transforms() applies:
+#   1. Price range (high - low)
+#   2. Top 5 gainer/loser flags (ROW_NUMBER window function)
+#   3. Market cap share % (coin / total × 100)
+#   4. Distance from ATH %
+#   5. Supply utilisation %
 #
-#   SUM(market_cap_usd) OVER (PARTITION BY snapshot_date)
-#     → Total market cap of all 50 coins for that day.
-#     → Each coin's share = its market_cap / total * 100.
-#
-#   price_to_ath_pct = ((current - ath) / ath) * 100
-#     → Negative means below ATH (e.g., -30% = 30% below peak).
-#     → Zero means AT the ATH right now.
-#
-#   supply_utilisation_pct = (circulating / total) * 100
-#     → null if total_supply is null (unlimited supply coins like ETH).
+# See transformations.py for full documentation of each formula.
 # =============================================================================
 
-logger.info("CELL 3: Applying Gold transformations")
-
-# Define window partitioned by date
-w_date = Window.partitionBy("snapshot_date")
-
-# Rank windows for gainer/loser flags
-w_gainer = Window.partitionBy("snapshot_date").orderBy(F.col("price_change_pct_24h").desc())
-w_loser  = Window.partitionBy("snapshot_date").orderBy(F.col("price_change_pct_24h").asc())
+logger.info("CELL 3: Applying Gold transformations (via transformations.py)")
 
 gold_df = (
-    silver_df
-    .select(
-        # ── Carry from Silver ─────────────────────────────────────────────────
-        F.col("snapshot_date").alias("summary_date"),
-        F.col("coin_id"),
-        F.col("name"),
-        F.col("symbol"),
-        F.col("current_price_usd"),
-        F.col("market_cap_usd"),
-        F.col("market_cap_rank"),
-        F.col("total_volume_24h_usd"),
-
-        # ── Derived: price range ──────────────────────────────────────────────
-        # How much the price swung in 24 hours (high - low)
-        (F.col("high_24h_usd") - F.col("low_24h_usd"))
-            .cast(DoubleType())
-            .alias("price_range_24h_usd"),
-
-        F.col("price_change_pct_24h"),
-
-        # ── Derived: top 5 gainer/loser flags ─────────────────────────────────
-        (F.row_number().over(w_gainer) <= 5)
-            .cast(BooleanType())
-            .alias("is_top5_gainer"),
-
-        (F.row_number().over(w_loser) <= 5)
-            .cast(BooleanType())
-            .alias("is_top5_loser"),
-
-        # ── Derived: market cap share ─────────────────────────────────────────
-        (
-            F.col("market_cap_usd")
-            / F.sum("market_cap_usd").over(w_date)
-            * 100
-        ).cast(DoubleType()).alias("mkt_cap_share_pct"),
-
-        # ── Derived: distance from ATH ────────────────────────────────────────
-        F.when(
-            F.col("ath_usd").isNotNull() & (F.col("ath_usd") > 0),
-            ((F.col("current_price_usd") - F.col("ath_usd")) / F.col("ath_usd") * 100)
-        ).cast(DoubleType()).alias("price_to_ath_pct"),
-
-        # ── Derived: supply utilisation ───────────────────────────────────────
-        F.when(
-            F.col("total_supply").isNotNull() & (F.col("total_supply") > 0),
-            (F.col("circulating_supply") / F.col("total_supply") * 100)
-        ).cast(DoubleType()).alias("supply_utilisation_pct"),
-    )
+    apply_daily_market_transforms(silver_df)
     .withColumn("gold_processed_timestamp", get_gold_timestamp(GoldConfig.RUN_TS))
 )
 
