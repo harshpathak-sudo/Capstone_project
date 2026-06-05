@@ -14,7 +14,7 @@
 
 from pyspark.sql import functions as F
 
-adls_name = "adlsnewhp1"
+adls_name = "adlsnewhp3"
 init_gold_config(adls_name)
 
 logger = get_logger("kpi_trending_widget")
