@@ -51,7 +51,7 @@ from pyspark.sql import functions as F
 from pyspark.sql import Window
 from pyspark.sql.types import BooleanType, DoubleType
 
-adls_name = "adlsnewhp1"
+adls_name = "adlsnewhp3"
 init_gold_config(adls_name)
 
 logger = get_logger("kpi_price_trends")
@@ -152,6 +152,8 @@ kpi_df = (
         F.col("price_usd"),
         F.col("volume_usd"),
         F.col("market_cap_usd"),
+        F.col("avg_volume_7d"),
+        F.col("spike_threshold"),
         F.col("is_volume_spike"),
         F.col("global_market_cap_usd"),
         F.col("btc_dominance_pct"),

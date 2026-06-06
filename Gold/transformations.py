@@ -181,6 +181,10 @@ def compute_volume_spikes(
         hourly_df
         .withColumn("avg_volume_7d", F.avg("volume_usd").over(w_vol))
         .withColumn(
+           "spike_threshold",
+            F.col("avg_volume_7d") * threshold_multiplier
+       )
+        .withColumn(
             "is_volume_spike",
             F.when(
                 F.col("avg_volume_7d").isNotNull() & (F.col("avg_volume_7d") > 0),
@@ -188,7 +192,7 @@ def compute_volume_spikes(
             ).otherwise(False)
             .cast(BooleanType())
         )
-        .drop("avg_volume_7d")
+        # .drop("avg_volume_7d")
     )
 
 # COMMAND ----------

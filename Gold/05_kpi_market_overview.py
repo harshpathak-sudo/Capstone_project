@@ -38,7 +38,7 @@
 
 from pyspark.sql import functions as F
 
-adls_name = "adlsnewhp1"
+adls_name = "adlsnewhp3"
 init_gold_config(adls_name)
 
 logger = get_logger("kpi_market_overview")
@@ -70,12 +70,35 @@ logger.info(f"  Rows for latest date: {row_count:,}")
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 3 — RENAME TO POWER BI-FRIENDLY COLUMNS
-# =============================================================================
 
-logger.info("CELL 3: Renaming columns to Power BI labels")
-
+# =============================================================================
+# CELL 3 — JOIN GLOBAL MARKET DATA + RENAME TO POWER BI-FRIENDLY COLUMNS
+#
+# WHY JOIN global_daily HERE?
+#   kpi_market_overview originally had SUM(market_cap_usd) across our top 50
+#   coins as the "total market cap". But the real crypto market has 10,000+
+#   coins — our top-50 SUM underestimates the true global market cap.
+#
+#   global_daily (from CoinGecko's /global endpoint) has the ACTUAL global
+#   total_market_cap_usd and total_volume_24h_usd across ALL coins.
+#   We attach these as columns so the dashboard shows the real global numbers
+#   alongside each coin's per-coin metrics.
+# =============================================================================
+logger.info("CELL 3: Reading global_daily for real global market numbers")
+global_df = spark.read.format("delta").load(GoldPaths.GLOBAL_DAILY)
+global_max_date = global_df.agg(F.max("stats_date")).collect()[0][0]
+logger.info(f"  Latest global_daily date: {global_max_date}")
+# Single row with global metrics for the latest date
+global_latest = (
+    global_df
+    .filter(F.col("stats_date") == global_max_date)
+    .select(
+        F.col("total_market_cap_usd").alias("global_market_cap_usd"),
+        F.col("total_volume_24h_usd").alias("global_volume_24h_usd"),
+        F.col("market_sentiment"),
+    )
+)
+logger.info("CELL 3: Renaming columns and joining global data")
 kpi_df = (
     latest_df
     .select(
@@ -94,6 +117,7 @@ kpi_df = (
         F.col("price_to_ath_pct"),
         F.col("summary_date").alias("snapshot_date"),
     )
+    .crossJoin(global_latest)  # 1 global row × 50 coin rows = 50 rows
 )
 
 # COMMAND ----------
