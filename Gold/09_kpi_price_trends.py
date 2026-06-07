@@ -115,6 +115,8 @@ kpi_df = (
         F.col("price_usd"),
         F.col("volume_usd"),
         F.col("market_cap_usd"),
+        F.col("avg_volume_7d"),
+        F.col("spike_threshold"),
         F.col("is_volume_spike"),
         F.col("global_market_cap_usd"),
         F.col("btc_dominance_pct"),

@@ -68,6 +68,7 @@ kpi_df = (
         F.col("price_to_ath_pct"),
         F.col("summary_date").alias("snapshot_date"),
     )
+    .crossJoin(global_latest)  # 1 global row × 50 coin rows = 50 rows
 )
 
 # COMMAND ----------
