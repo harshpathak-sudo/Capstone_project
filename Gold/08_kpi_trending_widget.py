@@ -1,22 +1,4 @@
 # Databricks notebook source
-# =============================================================================
-# NOTEBOOK: 08_kpi_trending_widget.py
-# LAYER:    Platinum (KPI)
-# PURPOSE:  Create a Power BI-ready widget table for the "Trending Now" page.
-#           Filters gold/trending_enriched to the LATEST DATE only.
-#           7 rows max (7 trending coins per day).
-#
-# SOURCE:   gold/trending_enriched  (latest date only)
-# OUTPUT:   gold/kpi_trending_widget (DELTA OVERWRITE)
-#
-# POWER BI USAGE:
-#   This table feeds Page 5 — "Trending Now":
-#     - Card grid: 7 trending coin cards with price + 24h change
-#     - KPI Cards: #1 Trending Coin, Trending coins in top 50
-# =============================================================================
-
-# COMMAND ----------
-
 # MAGIC %run ../connection
 
 # COMMAND ----------
@@ -29,9 +11,6 @@
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 1 — SETUP
-# =============================================================================
 
 from pyspark.sql import functions as F
 
@@ -49,9 +28,7 @@ logger.info("=" * 70)
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 2 — READ GOLD AND FILTER TO LATEST DATE
-# =============================================================================
+
 
 logger.info("CELL 2: Reading gold/trending_enriched (latest date)")
 
@@ -67,9 +44,8 @@ logger.info(f"  Rows for latest date: {row_count:,} (expected ~7)")
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 3 — RENAME TO POWER BI-FRIENDLY COLUMNS
-# =============================================================================
+# RENAME TO POWER BI-FRIENDLY COLUMNS
+
 
 logger.info("CELL 3: Renaming columns to Power BI labels")
 
@@ -93,9 +69,8 @@ kpi_df.display()
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 4 — OVERWRITE KPI TABLE
-# =============================================================================
+# OVERWRITE KPI TABLE
+
 
 logger.info("CELL 4: OVERWRITE gold/kpi_trending_widget")
 
@@ -103,9 +78,8 @@ written_count = delta_overwrite(kpi_df, GoldPaths.KPI_TRENDING_WIDGET, logger)
 
 # COMMAND ----------
 
-# =============================================================================
-# CELL 5 — RUN LOG + COMPLETION
-# =============================================================================
+# RUN LOG + COMPLETION
+
 
 summary = {
     "notebook"           : "08_kpi_trending_widget",
